@@ -24,7 +24,7 @@
     #define CONFIGURATION_PATH "/etc/opt/kerberosio/config/config.xml"
     #define LOG_PATH "/etc/opt/kerberosio/logs/log.stash"
 
-    #define RUNNING_ON_A_RASPBERRYPI false
+    #define RUNNING_ON_A_RASPBERRYPI true
     #if IS_RASPBERRYPI == 1
         #define RUNNING_ON_A_RASPBERRYPI true
     #endif
