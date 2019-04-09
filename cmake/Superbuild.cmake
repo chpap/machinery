@@ -27,8 +27,8 @@ include( ExternalProject )
 # --------------------------------------------------------------------------
 # OpenCV
 
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/External-OpenCV.cmake)
-    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} opencv)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenCV.cmake)
+    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} ${OPENCV_LIBRARIES})
 
     if(${IS_RASPBERRYPI})
 
