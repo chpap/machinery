@@ -57,5 +57,5 @@ include( ExternalProject )
 # --------------------------------------------------------------------------
 # Mosquitto
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/External-Mosquitto.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mosquitto.cmake)
     set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} mosquitto)
