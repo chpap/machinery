@@ -24,7 +24,7 @@ project(Kerberos)
 # ----------------------------------------------
 # Enable tests
 
-	set(TESTS_ENABLED 1)
+	set(TESTS_ENABLED 0)
 	if(TESTS_ENABLED)
 		include(CTest)
 	endif()

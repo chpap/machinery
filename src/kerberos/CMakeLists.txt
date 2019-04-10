@@ -53,7 +53,7 @@
         machinery/io/IoPushbullet.cpp
     )
 
-    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} opencv restclient mosquitto)
+    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} restclient )
     set(KERBEROS_LIBRARIES ${KERBEROS_LIBRARIES} ${OPENCV_LIBRARIES} ${RESTCLIENT_LIBRARIES} ${MOSQUITTO_LIBRARIES} pthread)
 
 

@@ -27,8 +27,8 @@ include( ExternalProject )
 # --------------------------------------------------------------------------
 # OpenCV
 
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/External-OpenCV.cmake)
-    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} opencv)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenCV.cmake)
+    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} ${OPENCV_LIBRARIES})
 
     if(${IS_RASPBERRYPI})
 
@@ -57,5 +57,5 @@ include( ExternalProject )
 # --------------------------------------------------------------------------
 # Mosquitto
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/External-Mosquitto.cmake)
-    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} mosquitto)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mosquitto.cmake)
+#    set(KERBEROS_DEPENDENCIES ${KERBEROS_DEPENDENCIES} mosquitto)
