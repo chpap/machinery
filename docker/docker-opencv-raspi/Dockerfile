@@ -14,7 +14,7 @@ ARG http_proxy
 ########################
 
 COPY qemu-arm-static /usr/bin
-
+ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && \
         apt-get install -y \
 	python-pip \
@@ -71,6 +71,11 @@ RUN apt-get update && \
 	libavresample-dev \
 	gfortran \
 	checkinstall \
+	curl \
+	libxine2 \
+	libmosquitto-dev \
+	libmosquittopp-dev \
+	supervisor \
     ## Cleanup
     && rm -rf /var/lib/apt/lists/*
 
@@ -100,7 +105,6 @@ RUN wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip \
     && rm $OPENCV_VERSION.zip 
 COPY cvstd_wrapper.hpp opencv-$OPENCV_VERSION/modules/core/include/opencv2/core/cvstd_wrapper.hpp
 
-RUN apt-get update && apt-get -y install vim libavresample-dev
 RUN useradd -r -u 1000 -g sudo builduser
 RUN chown -R builduser $OPENCV_SOURCE_PATH
 RUN chown -R builduser $OPENCV_BUILD_PATH
@@ -195,9 +199,81 @@ RUN  cd $OPENCV_BUILD_PATH \
 #    && echo rm -r /opencv-$OPENCV_VERSION
 ## Compress the openCV files so you can extract them from the docker easily 
 #RUN tar cvzf opencv-$OPENCV_VERSION.tar.gz --directory=$OPENCV_INSTALL_PATH .
-USER builduser
+RUN echo "deb http://mirrordirector.raspbian.org/raspbian/ stretch main contrib non-free rpi" | sudo tee --append /etc/apt/sources.list
+RUN sudo apt-get update && \
+	sudo apt-get install -y -t stretch php7.0 php7.0-curl php7.0-gd php7.0-fpm php7.0-cli php7.0-opcache php7.0-mbstring php7.0-xml php7.0-zip php7.0-mcrypt nodejs npm
+RUN dpkg -i $OPENCV_BUILD_PATH/*-dev.deb
+RUN mkdir -p /root/.ssh
+COPY id_rsa.github /root/.ssh/id_rsa.github
+COPY sshconfig /root/.ssh/config
+RUN chmod 400 /root/.ssh/*
+
+
+ARG MACHINERY_SRCREV=83e054fba6e748dbf2570ec11ef0b3f214f9f3f5
+RUN sudo apt-get install -y libomxil-bellagio-dev nginx libraspberrypi-dev
+RUN cd /usr/include && ln -s . IL
+RUN cd /opt && GIT_SSL_NO_VERIFY=true git clone git@github.com:chpap/machinery.git && cd machinery && git checkout ${MACHINERY_SRCREV} && mkdir /opt/machinery/build && cd /opt/machinery/build && cmake \
+	-DCPACK_DEBIAN_PACKAGE_DEPENDS="libxine2, libtbb2, libmosquittopp1" \
+	.. && \
+    export NUMPROC=$(nproc --all) && make -j$NUMPROC package  && dpkg -i kerberosio*.deb
+COPY configs/*.xml /etc/opt/kerberosio/config/
+RUN  chown -Rf www-data.www-data /etc/opt/kerberosio && \
+    chmod -Rf 777 /etc/opt/kerberosio/config
+
+RUN git clone https://github.com/kerberos-io/web /var/www/web && cd /var/www/web && git checkout master && \
+chown -Rf www-data.www-data /var/www/web
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer 
+#RUN cd /var/www/web && \
+#composer install --prefer-source
+#RUN cd /var/www/web && \
+#npm install -g bower && \
+#cd public && \
+#nodejs /usr/lib/node_modules/bower/bin/bower --allow-root install
+
+
+RUN rm /var/www/web/public/capture && \
+ln -s /etc/opt/kerberosio/capture/ /var/www/web/public/capture
+
+# Fixes, because we are now combining the two docker images.
+# Docker is aware of both web and machinery.
+RUN sed -i -e "s/'insideDocker'/'insideDocker' => false,\/\//" /var/www/web/app/Http/Controllers/SystemController.php
+# RUN sed -i -e "s/\$output \=/\$output \= '';\/\//" /var/www/web/app/Http/Controllers/SettingsController.php
+RUN sed -i -e "s/service kerberosio status/supervisorctl status machinery \| grep \"RUNNING\"';\/\//" /var/www/web/app/Http/Repositories/System/OSSystem.php
+
+###################
+# nginx site conf
+
+RUN rm -Rf /etc/nginx/conf.d/* && rm -Rf /etc/nginx/sites-available/default 
+ADD ./kerberosio.conf /etc/nginx/sites-available/default
+
+##################################
+# Fix PHP-FPM environment variables
+
+RUN sed -i 's/"GPCS"/"EGPCS"/g' /etc/php/7.0/fpm/php.ini
+RUN sed -i 's/"--daemonize/"--daemonize --allow-to-run-as-root/g' /etc/init.d/php7.0-fpm
+RUN sed -i 's/www-data/root/g' /etc/php/7.0/fpm/pool.d/www.conf
+RUN sed -i 's/www-data/root/g' /etc/nginx/nginx.conf
+
+# Merged supervisord config of both web and machinery
+ADD ./supervisord.conf /etc/supervisord.conf
+
+# Merge the two run files.
+ADD ./run.sh /runny.sh
+RUN chmod 755 /runny.sh
+RUN sed -i -e 's/\r$//' /runny.sh
+##USER builduser
+EXPOSE 8889
+EXPOSE 80
+# Make capture and config directory visible
+VOLUME ["/etc/opt/kerberosio/capture"]
+VOLUME ["/etc/opt/kerberosio/config"]
+VOLUME ["/etc/opt/kerberosio/logs"]
+
+# Make web config directory visible
+VOLUME ["/var/www/web/config"]
 VOLUME ["/opt/opencv"]
-ENTRYPOINT ["sleep", "infinity"]
+#ENTRYPOINT ["sleep", "infinity"]
+CMD ["/bin/bash", "/runny.sh"]
 
 #RUN apt-get update && apt-get install -y openssh-server
 #RUN mkdir /var/run/sshd
